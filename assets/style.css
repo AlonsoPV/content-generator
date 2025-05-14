@@ -1,0 +1,564 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  margin: 0;
+}
+input#tituloEdit, input#tituloText {
+    margin: 5px 0px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+textarea#contenidoEdit, textarea#contenidoText {
+    margin: 5px 0px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: rgba(0, 0, 0, 0.3);
+}
+	 
+ .info-wrapper {
+    display: inline-block;
+    position: relative; /* Contenedor relativo para el tooltip */
+	 width:80px;
+  }
+
+  .info-icon {
+    cursor: pointer;
+    margin-left: 5px;
+    color: #007bff;
+    font-size: 16px;
+    display: inline-block;
+  }
+
+.tooltip {
+  display: none;
+  position: absolute;
+  bottom: 150%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  white-space: normal;  /* Permite saltos de línea */
+  width: 250px;         /* Ancho fijo para evitar que se extienda */
+ /* max-width: 100%;       Para que no sea más ancho que el contenedor */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0;
+  transition: opacity 0.3s;
+  text-align: left;     /* Alinea el texto a la izquierda */
+  overflow: hidden;     /* Oculta cualquier desbordamiento */
+  word-wrap: break-word; /* Rompe palabras largas si es necesario */
+}
+
+  .tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+  }
+
+  .info-wrapper:hover .tooltip {
+    display: block;
+    opacity: 1;
+  }
+
+	 
+.form-group {
+    margin-bottom: 20px;
+    position: relative; /* Importante para que el tooltip se posicione bien */
+}
+	 
+label {
+    font-weight: bold;
+	margin-bottom: 5px;
+  }
+	 
+.keyword-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 10px 0px;
+}
+
+.keyword-group:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+/* Estilo para inputs */
+.keyword-group input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border 0.3s;
+}
+
+.keyword-group input:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Botón de eliminar */
+.remove-keyword-button {
+  background: #ff4d4d;
+  color: #fff;
+  width: auto;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.remove-keyword-button:hover {
+  background: #e60000;
+}
+
+/* Responsividad */
+@media (max-width: 600px) {
+  .keyword-group {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .keyword-group input {
+    width: 100%;
+  }
+
+  .remove-keyword-button {
+    width: 100%;
+    text-align: center;
+  }
+}
+.generador-contenido {
+  display: flex;
+  gap: 20px;
+  margin: 20px;
+}
+
+.formulario,
+.editor {
+  width: 50%;
+}
+#editor-toolbar {
+  display: flex;
+}
+#editor-toolbar button {
+  margin: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.image-container {
+  max-width: 450px;
+  height: auto;
+  margin: 15px;
+  overflow: hidden;
+}
+
+.image-container img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+p {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.generador-contenido {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap; /* Permite que los elementos se acomoden en pantallas pequeñas */
+}
+
+.formulario,
+.editor {
+  flex: 1;
+  min-width: 350px; /* Tamaño mínimo para evitar que se colapsen demasiado */
+  padding: 30px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.formulario:hover,
+.editor:hover {
+  transform: translateY(-5px);
+}
+
+input,
+select,
+textarea,
+button {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #0073aa;
+  box-shadow: 0 0 5px rgba(0, 115, 170, 0.5);
+}
+
+textarea {
+	min-height:350px;
+	height:350px;
+  	resize: vertical;
+}
+
+button {
+  background: #0073aa;
+  color: white;
+  cursor: pointer;
+  border: none;
+  transition: 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-generar {
+  background-color: #0073aa;
+  color: white;
+  border-color: #0073aa;
+}
+button i {
+  font-size: 18px;
+}
+
+button:hover {
+  background: #005a87;
+}
+
+#preview-tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+#preview-tabs button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: #ddd;
+  cursor: pointer;
+}
+
+#preview-tabs button.active {
+  background: #0073aa;
+  color: white;
+}
+
+#html-preview,
+#text-preview {
+  display: block;
+
+}
+
+#postCreatedButton {
+  display: none;
+  margin-top: 20px;
+  text-align: center;
+}
+
+#postCreatedButton a {
+  display: inline-block;
+  padding: 12px 20px;
+  background-color: #28a745;
+  color: white;
+  font-size: 16px;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+#postCreatedButton a:hover {
+  background-color: #218838;
+}
+
+#postCreatedButton a:active {
+  background-color: #1e7e34;
+}
+
+/* ✅ Ajustes para pantallas pequeñas */
+@media screen and (max-width: 768px) {
+  .generador-contenido {
+    flex-direction: column; /* Apila el formulario y el editor en columnas */
+    gap: 15px;
+  }
+
+  .formulario,
+  .editor {
+    min-width: 100%; /* Ocupa el ancho completo */
+    padding: 20px; /* Reduce el padding para mejor visualización */
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 14px; /* Tamaño de texto más pequeño para mejor ajuste */
+    padding: 10px;
+  }
+
+  button {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  #preview-tabs button {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  #postCreatedButton a {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .container {
+    padding: 15px;
+  }
+
+  .formulario,
+  .editor {
+    padding: 15px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 12px;
+    padding: 8px;
+  }
+
+  button i {
+    font-size: 14px;
+  }
+
+  #postCreatedButton a {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Moderniza los selects y campos de parámetros */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.form-group {
+  flex: 1 1 180px;
+  min-width: 180px;
+  background: #f8fafc;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 18px 16px 10px 16px;
+  margin-bottom: 0;
+  border: 1.5px solid #e3e8ee;
+  transition: box-shadow 0.2s, border 0.2s;
+}
+.form-group:focus-within {
+  border: 1.5px solid #0073aa;
+  box-shadow: 0 0 0 2px #b3e0ff;
+}
+
+label {
+  font-weight: 600;
+  margin-bottom: 7px;
+  color: #22223b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.08em;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1.5px solid #e3e8ee;
+  border-radius: 10px;
+  font-size: 1.08em;
+  background: #fff;
+  margin-top: 6px;
+  margin-bottom: 2px;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  border: 1.5px solid #0073aa;
+  outline: none;
+  box-shadow: 0 0 0 2px #b3e0ff;
+}
+
+select {
+  appearance: none;
+  background: #fff url('data:image/svg+xml;utf8,<svg fill="%230073aa" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7.293 7.293a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z"/></svg>') no-repeat right 1.2em center/1.2em 1.2em;
+  font-weight: 500;
+  color: #22223b;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+select option {
+  padding: 10px;
+  font-size: 1em;
+}
+
+.info-wrapper {
+  width: auto;
+  margin-left: 4px;
+}
+
+.tooltip {
+  font-size: 0.98em;
+  background: #22223b;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.btn-add-keyword {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1.08em;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-add-keyword:hover {
+  background: #c7d2fe;
+  color: #1e40af;
+}
+
+.btn-generar {
+  background: linear-gradient(90deg, #0073aa 60%, #4f8cff 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1.08em;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,115,170,0.08);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.btn-generar:hover {
+  background: linear-gradient(90deg, #005a87 60%, #2563eb 100%);
+  box-shadow: 0 4px 16px rgba(0,115,170,0.12);
+}
+
+.remove-keyword-button {
+  background: #f87171;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1em;
+  padding: 8px 14px;
+  margin-left: 8px;
+  transition: background 0.2s;
+}
+.remove-keyword-button:hover {
+  background: #dc2626;
+}
+
+/* Mejora la visualización de la vista previa */
+#preview-tabs button {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  font-weight: 600;
+  font-size: 1.08em;
+  margin-right: 2px;
+  transition: background 0.2s, color 0.2s;
+}
+#preview-tabs button.active {
+  background: #0073aa;
+  color: #fff;
+}
+
+#html-preview, #text-preview {
+  background: #f8fafc;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 18px 16px 10px 16px;
+  margin-bottom: 18px;
+  border: 1.5px solid #e3e8ee;
+  border-top: none;
+}
+
+#editor-toolbar button {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1.08em;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  transition: background 0.2s, color 0.2s;
+}
+#editor-toolbar button:hover {
+  background: #c7d2fe;
+  color: #1e40af;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 900px) {
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .form-group {
+    min-width: 100%;
+  }
+} 
