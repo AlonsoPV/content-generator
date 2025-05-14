@@ -66,9 +66,10 @@ function aicg_generator_admin_page() {
 
 // Cargar scripts y estilos solo en la página del generador en el admin
 add_action('admin_enqueue_scripts', function($hook) {
-    // if ($hook !== 'toplevel_page_ai-content-generator-generator') return;
+    if ($hook !== 'toplevel_page_ai-content-generator-generator') return;
+    
     wp_enqueue_style('ai-content-generator-style', plugins_url('assets/style.css', __FILE__));
-    wp_enqueue_script('ai-content-generator-script', plugins_url('assets/script.js', __FILE__), array('jquery'), null, true);
+    wp_enqueue_script('ai-content-generator-script', plugins_url('assets/script.js', __FILE__), array('jquery'), '1.0.0', true);
     wp_localize_script('ai-content-generator-script', 'AICG', array(
         'ajax_url' => admin_url('admin-ajax.php'),
         'nonce'    => wp_create_nonce('generador_nonce')
@@ -147,76 +148,113 @@ function aicg_generar_contenido_ajax() {
 // AJAX: Publicar post
 add_action('wp_ajax_publicar_post', 'aicg_publicar_post_ajax');
 function aicg_publicar_post_ajax() {
-    check_ajax_referer('generador_nonce', 'nonce');
+    try {
+        check_ajax_referer('generador_nonce', 'nonce');
 
-    if (!isset($_POST['title']) || !isset($_POST['content'])) {
-        wp_send_json_error("Faltan datos para publicar el contenido.");
-        return;
-    }
+        if (!isset($_POST['title']) || !isset($_POST['content'])) {
+            wp_send_json_error("Faltan datos para publicar el contenido.");
+            return;
+        }
 
-    $titulo = sanitize_text_field($_POST['title']);
-    $contenido = wp_unslash($_POST['content']);
+        $titulo = sanitize_text_field($_POST['title']);
+        $contenido = wp_unslash($_POST['content']);
 
-    // Subir imágenes
-    $imagenes_urls = [];
-    if (!empty($_FILES['imagenes']['name'][0])) {
-        $files = $_FILES['imagenes'];
-        foreach ($files['name'] as $key => $value) {
-            if ($files['name'][$key]) {
-                $file = [
-                    'name'     => $files['name'][$key],
-                    'type'     => $files['type'][$key],
-                    'tmp_name' => $files['tmp_name'][$key],
-                    'error'    => $files['error'][$key],
-                    'size'     => $files['size'][$key],
-                ];
+        if (empty($titulo) || empty($contenido)) {
+            wp_send_json_error("El título y el contenido no pueden estar vacíos.");
+            return;
+        }
 
-                $upload = wp_handle_upload($file, ['test_form' => false]);
-                if (isset($upload['error'])) continue;
+        // Verificar permisos
+        if (!current_user_can('publish_posts')) {
+            wp_send_json_error("No tienes permisos para publicar posts.");
+            return;
+        }
 
-                $attachment = [
-                    'post_mime_type' => $upload['type'],
-                    'post_title'     => sanitize_file_name($files['name'][$key]),
-                    'post_content'   => '',
-                    'post_status'    => 'inherit'
-                ];
+        // Subir imágenes
+        $imagenes_urls = [];
+        if (!empty($_FILES['imagenes']['name'][0])) {
+            require_once(ABSPATH . 'wp-admin/includes/image.php');
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+            require_once(ABSPATH . 'wp-admin/includes/media.php');
 
-                $attachment_id = wp_insert_attachment($attachment, $upload['file']);
-                require_once ABSPATH . 'wp-admin/includes/image.php';
-                $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload['file']);
-                wp_update_attachment_metadata($attachment_id, $attachment_data);
+            $files = $_FILES['imagenes'];
+            foreach ($files['name'] as $key => $value) {
+                if ($files['name'][$key]) {
+                    $file = [
+                        'name'     => $files['name'][$key],
+                        'type'     => $files['type'][$key],
+                        'tmp_name' => $files['tmp_name'][$key],
+                        'error'    => $files['error'][$key],
+                        'size'     => $files['size'][$key],
+                    ];
 
-                $imagenes_urls[] = wp_get_attachment_url($attachment_id);
+                    $upload = wp_handle_upload($file, ['test_form' => false]);
+                    if (isset($upload['error'])) {
+                        error_log('Error al subir imagen: ' . $upload['error']);
+                        continue;
+                    }
+
+                    $attachment = [
+                        'post_mime_type' => $upload['type'],
+                        'post_title'     => sanitize_file_name($files['name'][$key]),
+                        'post_content'   => '',
+                        'post_status'    => 'inherit'
+                    ];
+
+                    $attachment_id = wp_insert_attachment($attachment, $upload['file']);
+                    if (is_wp_error($attachment_id)) {
+                        error_log('Error al crear attachment: ' . $attachment_id->get_error_message());
+                        continue;
+                    }
+
+                    $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload['file']);
+                    wp_update_attachment_metadata($attachment_id, $attachment_data);
+
+                    $imagenes_urls[] = wp_get_attachment_url($attachment_id);
+                }
             }
         }
-    }
 
-    // Distribuir imágenes flotantes entre el contenido
-    $content_with_images = '';
-    foreach ($imagenes_urls as $imagen_index => $imagen_url) {
-        if ($imagen_index == 0) {
-            $content_with_images .= "<div style='text-align: center; margin-bottom: 10px;'><img src='{$imagen_url}' alt='Imagen' style='width: 100%; max-width: 750px; height: auto;'></div>";
-        } else {
-            $float = ($imagen_index % 2 == 0) ? 'left' : 'right';
-            $content_with_images .= "<span style='overflow: hidden; margin: 10px; display: inline;'><img src='{$imagen_url}' alt='Imagen' style='width: 50%; height: auto; float: {$float}; margin: 15px;'></span>";
+        // Distribuir imágenes flotantes entre el contenido
+        $content_with_images = '';
+        foreach ($imagenes_urls as $imagen_index => $imagen_url) {
+            if ($imagen_index == 0) {
+                $content_with_images .= "<div style='text-align: center; margin-bottom: 10px;'><img src='{$imagen_url}' alt='Imagen' style='width: 100%; max-width: 750px; height: auto;'></div>";
+            } else {
+                $float = ($imagen_index % 2 == 0) ? 'left' : 'right';
+                $content_with_images .= "<span style='overflow: hidden; margin: 10px; display: inline;'><img src='{$imagen_url}' alt='Imagen' style='width: 50%; height: auto; float: {$float}; margin: 15px;'></span>";
+            }
         }
+        $contenido = $content_with_images . $contenido;
+
+        $nuevo_post = [
+            'post_title'   => $titulo,
+            'post_content' => $contenido,
+            'post_status'  => 'publish',
+            'post_author'  => get_current_user_id(),
+            'post_type'    => 'post',
+        ];
+
+        $post_id = wp_insert_post($nuevo_post);
+
+        if (is_wp_error($post_id)) {
+            error_log('Error al crear post: ' . $post_id->get_error_message());
+            wp_send_json_error("Error al publicar el post: " . $post_id->get_error_message());
+            return;
+        }
+
+        $permalink = get_permalink($post_id);
+        if (!$permalink) {
+            error_log('Error al obtener permalink para el post ID: ' . $post_id);
+            wp_send_json_error("Error al obtener la URL del post.");
+            return;
+        }
+
+        wp_send_json_success($permalink);
+    } catch (Exception $e) {
+        error_log('Excepción al publicar post: ' . $e->getMessage());
+        wp_send_json_error("Error inesperado: " . $e->getMessage());
     }
-    $contenido = $content_with_images . $contenido;
-
-    $nuevo_post = [
-        'post_title'   => $titulo,
-        'post_content' => $contenido,
-        'post_status'  => 'publish',
-        'post_author'  => get_current_user_id(),
-        'post_type'    => 'post',
-    ];
-
-    $post_id = wp_insert_post($nuevo_post);
-
-    if (is_wp_error($post_id)) {
-        wp_send_json_error("Error al publicar el post.");
-    }
-    wp_send_json_success(get_permalink($post_id));
 }
 
 // Handler para enviar el contenido como correo electrónico

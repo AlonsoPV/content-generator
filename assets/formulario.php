@@ -1,6 +1,5 @@
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-<script src="<?php echo plugins_url('assets/script.js', dirname(__FILE__)); ?>"></script>
 
 <div class="generador-contenido">
   <div class="formulario">

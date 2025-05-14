@@ -2,7 +2,16 @@
 
 console.log('Script cargado - inicio del archivo');
 
+// Variables globales (solo una vez)
+let tituloEdit, tituloText, contenidoEdit, contenidoText, tipoContenido, publicarBtn, imagenesDiv, emailForm, enviarCorreoBtn, emailStatus;
+let isInitialized = false;
+
 document.addEventListener("DOMContentLoaded", function() {
+    if (isInitialized) {
+        console.log('Script ya inicializado, evitando reinicialización');
+        return;
+    }
+    
     console.log('DOMContentLoaded ejecutado');
     initElementos();
     initMostrarBoton();
@@ -15,10 +24,9 @@ document.addEventListener("DOMContentLoaded", function() {
     initPublicarPost();
     initEnviarCorreo();
     initPostCreatedButton();
+    
+    isInitialized = true;
 });
-
-// Variables globales (solo una vez)
-let tituloEdit, tituloText, contenidoEdit, contenidoText, tipoContenido, publicarBtn, imagenesDiv, emailForm, enviarCorreoBtn, emailStatus;
 
 function initElementos() {
     console.log('Iniciando initElementos');
@@ -260,7 +268,10 @@ function handleGenerarPostResponse(data, button) {
 
 function initPublicarPost() {
     const publicarButton = document.getElementById("publicarPost");
-    if (!publicarButton) return;
+    if (!publicarButton) {
+        console.error('No se encontró el botón de publicar');
+        return;
+    }
 
     publicarButton.addEventListener("click", function() {
         const contenido = document.getElementById("contenidoEdit").value.trim();
@@ -268,6 +279,14 @@ function initPublicarPost() {
             alert("Cuidado!: Debes generar el contenido antes de publicar algo.");
             return;
         }
+
+        // Log de los datos que se enviarán
+        console.log('Enviando datos para publicar:', {
+            title: document.getElementById("tituloEdit").value,
+            contentLength: contenido.length,
+            hasImages: document.getElementById("imagenes")?.files?.length > 0
+        });
+
         publicarButton.disabled = true;
         publicarButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
 
@@ -276,31 +295,43 @@ function initPublicarPost() {
         formData.append("nonce", AICG.nonce);
         formData.append("title", document.getElementById("tituloEdit").value);
         formData.append("content", document.getElementById("contenidoEdit").value);
+        
         const imagenesInput = document.getElementById("imagenes");
-
-        if (imagenesInput?.files.length) {
+        if (imagenesInput && imagenesInput.files && imagenesInput.files.length > 0) {
             for (const file of imagenesInput.files) {
                 formData.append("imagenes[]", file);
             }
         }
 
-        fetch(AICG.ajax_url, { method: "POST", body: formData })
-            .then(response => response.json())
-            .then(data => handlePublicarPostResponse(data, publicarButton))
-            .catch(error => handleAjaxError(error, publicarButton, 'Publicar'));
+        fetch(AICG.ajax_url, { 
+            method: "POST", 
+            body: formData 
+        })
+        .then(response => {
+            console.log('Status de la respuesta:', response.status);
+            return response.json();
+        })
+        .then(data => handlePublicarPostResponse(data, publicarButton))
+        .catch(error => {
+            console.error('Error en la petición:', error);
+            handleAjaxError(error, publicarButton, 'Publicar');
+        });
     });
 }
 
 function handlePublicarPostResponse(data, button) {
+    console.log('Respuesta del servidor:', data); // Log de la respuesta
     button.disabled = false;
     button.innerHTML = '<i class="fas fa-paper-plane"></i> Publicar';
+    
     if (data.success) {
         const postLink = document.getElementById("postLink");
         postLink.href = data.data;
         postLink.innerText = `¡Post creado con éxito!`;
         document.getElementById("postCreatedButton").style.display = "block";
     } else {
-        alert("Error al publicar el post.");
+        console.error('Error al publicar:', data.data); // Log del error
+        alert("Error al publicar el post: " + (data.data || 'Error desconocido'));
     }
 }
 
