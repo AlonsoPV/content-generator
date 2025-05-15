@@ -43,13 +43,58 @@ function aicg_settings_page() {
                 <tr valign="top">
                     <th scope="row">AI21 API Key</th>
                     <td>
-                        <input type="text" name="aicg_api_key" value="<?php echo esc_attr(get_option('aicg_api_key')); ?>" size="50" />
+                        <input type="text" name="aicg_api_key" id="aicg_api_key" value="<?php echo esc_attr(get_option('aicg_api_key')); ?>" size="50" />
+                        <button type="button" id="test_api_connection" class="button button-secondary" style="margin-left: 10px;">
+                            <span class="dashicons dashicons-update"></span> Probar conexión
+                        </button>
+                        <div id="api_status" style="margin-top: 10px; padding: 10px; border-radius: 4px; display: none;"></div>
                     </td>
                 </tr>
             </table>
             <?php submit_button(); ?>
         </form>
     </div>
+
+    <script>
+    jQuery(document).ready(function($) {
+        $('#test_api_connection').on('click', function() {
+            var button = $(this);
+            var statusDiv = $('#api_status');
+            var apiKey = $('#aicg_api_key').val();
+
+            if (!apiKey) {
+                statusDiv.html('<span style="color: #dc3232;">❌ Por favor, ingresa una API Key primero.</span>').show();
+                return;
+            }
+
+            button.prop('disabled', true);
+            statusDiv.html('<span style="color: #666;">🔄 Probando conexión...</span>').show();
+
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'test_ai21_connection',
+                    api_key: apiKey,
+                    nonce: '<?php echo wp_create_nonce("test_ai21_connection"); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        statusDiv.html('<span style="color: #46b450;">✅ Conexión exitosa con AI21 API</span>').show();
+                    } else {
+                        statusDiv.html('<span style="color: #dc3232;">❌ Error: ' + response.data + '</span>').show();
+                    }
+                },
+                error: function() {
+                    statusDiv.html('<span style="color: #dc3232;">❌ Error al conectar con el servidor</span>').show();
+                },
+                complete: function() {
+                    button.prop('disabled', false);
+                }
+            });
+        });
+    });
+    </script>
     <?php
 }
 add_action('admin_init', function() {
@@ -136,13 +181,23 @@ function aicg_generar_contenido_ajax() {
 
     $contenido = $response_body['choices'][0]['message']['content'] ?? "";
 
+    // Limpiar el contenido de las comillas markdown
+    $contenido = preg_replace('/^```html\s*|\s*```$/m', '', $contenido);
+    $contenido = trim($contenido);
+
+    // Extraer el título
     preg_match('/<h1>(.*?)<\/h1>/', $contenido, $matches);
     $titulo = !empty($matches[1]) ? $matches[1] : 'Título generado automáticamente';
 
+    // Limpiar el contenido
     $contenido = preg_replace('/<h1>.*?<\/h1>/', '', $contenido);
     $contenido = wp_kses_post($contenido);
 
-    wp_send_json_success(array("title" => $titulo, "content" => trim($contenido)));
+    error_log('Contenido generado exitosamente');
+    wp_send_json_success(array(
+        "title" => $titulo,
+        "content" => trim($contenido)
+    ));
 }
 
 // AJAX: Publicar post
@@ -158,6 +213,10 @@ function aicg_publicar_post_ajax() {
 
         $titulo = sanitize_text_field($_POST['title']);
         $contenido = wp_unslash($_POST['content']);
+
+        // Limpiar el contenido de las comillas markdown
+        $contenido = preg_replace('/^```html\s*|\s*```$/m', '', $contenido);
+        $contenido = trim($contenido);
 
         if (empty($titulo) || empty($contenido)) {
             wp_send_json_error("El título y el contenido no pueden estar vacíos.");
@@ -210,26 +269,58 @@ function aicg_publicar_post_ajax() {
                     $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload['file']);
                     wp_update_attachment_metadata($attachment_id, $attachment_data);
 
-                    $imagenes_urls[] = wp_get_attachment_url($attachment_id);
+                    $imagenes_urls[] = [
+                        'url' => wp_get_attachment_url($attachment_id),
+                        'id' => $attachment_id
+                    ];
                 }
             }
         }
 
         // Distribuir imágenes flotantes entre el contenido
         $content_with_images = '';
-        foreach ($imagenes_urls as $imagen_index => $imagen_url) {
-            if ($imagen_index == 0) {
-                $content_with_images .= "<div style='text-align: center; margin-bottom: 10px;'><img src='{$imagen_url}' alt='Imagen' style='width: 100%; max-width: 750px; height: auto;'></div>";
-            } else {
-                $float = ($imagen_index % 2 == 0) ? 'left' : 'right';
-                $content_with_images .= "<span style='overflow: hidden; margin: 10px; display: inline;'><img src='{$imagen_url}' alt='Imagen' style='width: 50%; height: auto; float: {$float}; margin: 15px;'></span>";
+        $paragraphs = explode('</p>', $contenido);
+        $total_paragraphs = count($paragraphs);
+        
+        // Si hay imágenes, distribuir una cada 2-3 párrafos
+        if (!empty($imagenes_urls)) {
+            $image_index = 0;
+            $content_with_images = '';
+            
+            foreach ($paragraphs as $index => $paragraph) {
+                if ($paragraph) {
+                    $content_with_images .= $paragraph . '</p>';
+                    
+                    // Insertar imagen después de cada 2-3 párrafos
+                    if ($image_index < count($imagenes_urls) && ($index + 1) % rand(2, 3) === 0) {
+                        $float = rand(0, 1) ? 'left' : 'right'; // Aleatorio entre izquierda y derecha
+                        $margin = $float === 'left' ? 'margin-right: 20px;' : 'margin-left: 20px;';
+                        
+                        $content_with_images .= sprintf(
+                            '<div style="float: %s; %s margin-bottom: 20px; width: 45%%; max-width: 400px;">
+                                <img src="%s" alt="%s" style="width: 100%%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                            </div>',
+                            $float,
+                            $margin,
+                            esc_url($imagenes_urls[$image_index]['url']),
+                            esc_attr(get_the_title($imagenes_urls[$image_index]['id']))
+                        );
+                        
+                        $image_index++;
+                    }
+                }
             }
+            
+            // Agregar un div de limpieza después del contenido
+            $content_with_images .= '<div style="clear: both;"></div>';
+        } else {
+            $content_with_images = $contenido;
         }
-        $contenido = $content_with_images . $contenido;
 
+        // Crear el post
         $nuevo_post = [
             'post_title'   => $titulo,
-            'post_content' => $contenido,
+            'post_content' => $content_with_images,
             'post_status'  => 'publish',
             'post_author'  => get_current_user_id(),
             'post_type'    => 'post',
@@ -241,6 +332,16 @@ function aicg_publicar_post_ajax() {
             error_log('Error al crear post: ' . $post_id->get_error_message());
             wp_send_json_error("Error al publicar el post: " . $post_id->get_error_message());
             return;
+        }
+
+        // Asociar las imágenes al post
+        if (!empty($imagenes_urls)) {
+            foreach ($imagenes_urls as $imagen) {
+                wp_update_post([
+                    'ID' => $imagen['id'],
+                    'post_parent' => $post_id
+                ]);
+            }
         }
 
         $permalink = get_permalink($post_id);
@@ -309,5 +410,53 @@ add_action('wp_ajax_enviar_correo_contenido', function() {
         wp_send_json_success();
     } else {
         wp_send_json_error("No se pudo enviar el correo. Verifica la configuración SMTP de tu sitio.");
+    }
+});
+
+// Add AJAX handler for testing API connection
+add_action('wp_ajax_test_ai21_connection', function() {
+    check_ajax_referer('test_ai21_connection', 'nonce');
+    
+    $api_key = sanitize_text_field($_POST['api_key']);
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API Key no proporcionada');
+        return;
+    }
+
+    $data = array(
+        "model" => "jamba-large-1.6",
+        "messages" => array(
+            array("role" => "system", "content" => "Test de conexión"),
+            array("role" => "user", "content" => "Responde con 'OK' si puedes leer este mensaje.")
+        ),
+        "temperature" => 0.7,
+        "top_p" => 0.8,
+    );
+
+    $args = array(
+        'headers' => array(
+            'Content-Type' => 'application/json; charset=utf-8',
+            'Authorization' => 'Bearer ' . $api_key
+        ),
+        'body' => json_encode($data),
+        'timeout' => 15
+    );
+
+    $response = wp_remote_post('https://api.ai21.com/studio/v1/chat/completions', $args);
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Error de conexión: ' . $response->get_error_message());
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = json_decode(wp_remote_retrieve_body($response), true);
+    
+    if ($response_code === 200 && isset($response_body['choices'][0]['message']['content'])) {
+        wp_send_json_success('✅ Conexión de API exitosa - El sistema está listo para generar contenido');
+    } else {
+        $error_message = isset($response_body['error']) ? $response_body['error'] : 'Error desconocido';
+        wp_send_json_error('Error de API: ' . $error_message);
     }
 }); 
