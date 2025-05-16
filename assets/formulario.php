@@ -3,7 +3,7 @@
 
 <div class="generador-contenido">
   <div class="formulario">
-    <h2>¡Genera tu idea!</h2>
+    <h2>¡Genera tu idea! 84132b46-bdb1-47b9-841c-d4dbc9be6229</h2>
     <form id="generadorForm">
       <div class="form-row">
         <div class="form-group">
@@ -13,6 +13,7 @@
                 <option value="post">Post para tu Blog</option>
                 <option value="correo">Correo</option>
                 <option value="whatsapp">Whatsapp</option>
+                <option value="linkedin">LinkedIn</option>
               </select>
               <div id="plataforma-seleccionada" style="margin-top: 10px; padding: 10px; border-radius: 5px; display: none; background-color: #f0f0f0;">
                 Plataforma seleccionada: <strong id="nombre-plataforma"></strong>
@@ -143,6 +144,8 @@ El estilo define cómo se presentará la información: narrativo, técnico, conv
     <div class="form-group" id="imagenes">
       <label for="imagenes"><i class="fas fa-images"></i> Subir imágenes:</label>
       <input type="file" id="imagenes" name="imagenes[]" multiple accept="image/*">
+      <div id="preview-contenedor" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;"></div>
+
     </div>
     <button id="publicarPost" class="btn-publicar">
       <i class="fas fa-paper-plane"></i> Publicar</button>

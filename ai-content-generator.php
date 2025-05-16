@@ -230,119 +230,105 @@ function aicg_publicar_post_ajax() {
         }
 
         // Subir imágenes
-        $imagenes_urls = [];
-        if (!empty($_FILES['imagenes']['name'][0])) {
-            require_once(ABSPATH . 'wp-admin/includes/image.php');
-            require_once(ABSPATH . 'wp-admin/includes/file.php');
-            require_once(ABSPATH . 'wp-admin/includes/media.php');
+        // Subir imágenes
+$imagenes_urls = [];
 
-            $files = $_FILES['imagenes'];
-            foreach ($files['name'] as $key => $value) {
-                if ($files['name'][$key]) {
-                    $file = [
-                        'name'     => $files['name'][$key],
-                        'type'     => $files['type'][$key],
-                        'tmp_name' => $files['tmp_name'][$key],
-                        'error'    => $files['error'][$key],
-                        'size'     => $files['size'][$key],
-                    ];
+if (!empty($_FILES['imagenes']['name'][0])) {
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+    require_once(ABSPATH . 'wp-admin/includes/file.php');
+    require_once(ABSPATH . 'wp-admin/includes/media.php');
 
-                    $upload = wp_handle_upload($file, ['test_form' => false]);
-                    if (isset($upload['error'])) {
-                        error_log('Error al subir imagen: ' . $upload['error']);
-                        continue;
-                    }
+    $files = $_FILES['imagenes'];
+    foreach ($files['name'] as $key => $value) {
+        if (!empty($files['name'][$key])) {
+            $file = [
+                'name'     => $files['name'][$key],
+                'type'     => $files['type'][$key],
+                'tmp_name' => $files['tmp_name'][$key],
+                'error'    => $files['error'][$key],
+                'size'     => $files['size'][$key],
+            ];
 
-                    $attachment = [
-                        'post_mime_type' => $upload['type'],
-                        'post_title'     => sanitize_file_name($files['name'][$key]),
-                        'post_content'   => '',
-                        'post_status'    => 'inherit'
-                    ];
+            // Subida segura con compatibilidad completa
+            $attachment_id = media_handle_sideload($file, 0);
 
-                    $attachment_id = wp_insert_attachment($attachment, $upload['file']);
-                    if (is_wp_error($attachment_id)) {
-                        error_log('Error al crear attachment: ' . $attachment_id->get_error_message());
-                        continue;
-                    }
-
-                    $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload['file']);
-                    wp_update_attachment_metadata($attachment_id, $attachment_data);
-
-                    $imagenes_urls[] = [
-                        'url' => wp_get_attachment_url($attachment_id),
-                        'id' => $attachment_id
-                    ];
-                }
+            if (is_wp_error($attachment_id)) {
+                error_log('Error al subir imagen: ' . $attachment_id->get_error_message());
+                continue;
             }
+
+            $imagenes_urls[] = [
+                'id'   => $attachment_id,
+                'url'  => wp_get_attachment_url($attachment_id)
+            ];
         }
+    }
+}
 
-        // Distribuir imágenes flotantes entre el contenido
-        $content_with_images = '';
-        $paragraphs = explode('</p>', $contenido);
-        $total_paragraphs = count($paragraphs);
-        
-        // Si hay imágenes, distribuir una cada 2-3 párrafos
-        if (!empty($imagenes_urls)) {
-            $image_index = 0;
-            $content_with_images = '';
-            
-            foreach ($paragraphs as $index => $paragraph) {
-                if ($paragraph) {
-                    $content_with_images .= $paragraph . '</p>';
-                    
-                    // Insertar imagen después de cada 2-3 párrafos
-                    if ($image_index < count($imagenes_urls) && ($index + 1) % rand(2, 3) === 0) {
-                        $float = rand(0, 1) ? 'left' : 'right'; // Aleatorio entre izquierda y derecha
-                        $margin = $float === 'left' ? 'margin-right: 20px;' : 'margin-left: 20px;';
-                        
-                        $content_with_images .= sprintf(
-                            '<div style="float: %s; %s margin-bottom: 20px; width: 45%%; max-width: 400px;">
-                                <img src="%s" alt="%s" style="width: 100%%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                            </div>',
-                            $float,
-                            $margin,
-                            esc_url($imagenes_urls[$image_index]['url']),
-                            esc_attr(get_the_title($imagenes_urls[$image_index]['id']))
-                        );
-                        
-                        $image_index++;
-                    }
-                }
-            }
-            
-            // Agregar un div de limpieza después del contenido
-            $content_with_images .= '<div style="clear: both;"></div>';
-        } else {
-            $content_with_images = $contenido;
+// Crear contenido con imágenes flotantes
+$content_with_images = '';
+
+foreach ($imagenes_urls as $index => $imagen) {
+    $url = esc_url($imagen['url']);
+
+    if ($index === 0) {
+        // Imagen centrada
+        $content_with_images .= "<div style='text-align: center; margin-bottom: 20px;'>
+                                    <img src='{$url}' alt='Imagen destacada' style='width: 100%; max-width: 750px; height: auto; border-radius: 10px;'>
+                                 </div>";
+    } else {
+        // Alternar izquierda/derecha
+        $float = ($index % 2 === 0) ? 'left' : 'right';
+        $margin = $float === 'left' ? 'margin-right: 20px;' : 'margin-left: 20px;';
+        $content_with_images .= "<figure style='float: {$float}; {$margin} margin-bottom: 20px; width: 45%; max-width: 400px;'>
+                                    <img src='{$url}' alt='Imagen' style='width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);'>
+                                 </figure>";
+    }
+}
+
+$content_with_images .= '<div style="clear: both;"></div>';
+
+// Combinar imágenes con contenido original
+$contenido_final = $content_with_images . $contenido;
+
+// Crear el post
+$nuevo_post = [
+    'post_title'   => $titulo,
+    'post_content' => $contenido_final,
+    'post_status'  => 'publish',
+    'post_author'  => get_current_user_id(),
+    'post_type'    => 'post',
+];
+
+$post_id = wp_insert_post($nuevo_post);
+
+if (is_wp_error($post_id)) {
+    error_log('Error al crear post: ' . $post_id->get_error_message());
+    wp_send_json_error('No se pudo crear el post');
+}
+
+// Asociar imágenes al post y destacar la primera
+foreach ($imagenes_urls as $i => $img) {
+    wp_update_post([
+        'ID' => $img['id'],
+        'post_parent' => $post_id,
+    ]);
+
+    if ($i === 0) {
+        set_post_thumbnail($post_id, $img['id']);
+    }
+}
+
+clean_post_cache($post_id);
+wp_cache_delete($post_id, 'posts');
+        wp_cache_delete($post_id, 'post_meta');
+
+        // Limpiar caché de imágenes
+        foreach ($imagenes_urls as $imagen) {
+            wp_cache_delete($imagen['id'], 'posts');
+            wp_cache_delete($imagen['id'], 'post_meta');
         }
-
-        // Crear el post
-        $nuevo_post = [
-            'post_title'   => $titulo,
-            'post_content' => $content_with_images,
-            'post_status'  => 'publish',
-            'post_author'  => get_current_user_id(),
-            'post_type'    => 'post',
-        ];
-
-        $post_id = wp_insert_post($nuevo_post);
-
-        if (is_wp_error($post_id)) {
-            error_log('Error al crear post: ' . $post_id->get_error_message());
-            wp_send_json_error("Error al publicar el post: " . $post_id->get_error_message());
-            return;
-        }
-
-        // Asociar las imágenes al post
-        if (!empty($imagenes_urls)) {
-            foreach ($imagenes_urls as $imagen) {
-                wp_update_post([
-                    'ID' => $imagen['id'],
-                    'post_parent' => $post_id
-                ]);
-            }
-        }
+        error_log('Caché limpiada para post e imágenes');
 
         $permalink = get_permalink($post_id);
         if (!$permalink) {
@@ -350,6 +336,7 @@ function aicg_publicar_post_ajax() {
             wp_send_json_error("Error al obtener la URL del post.");
             return;
         }
+        error_log('Permalink generado: ' . $permalink);
 
         wp_send_json_success($permalink);
     } catch (Exception $e) {

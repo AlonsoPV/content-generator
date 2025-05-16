@@ -30,6 +30,23 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function initElementos() {
     console.log('Iniciando initElementos');
+    document.getElementById("imagenes").addEventListener("change", function () {
+        const contenedor = document.getElementById("preview-contenedor");
+        contenedor.innerHTML = ""; // limpiar previos
+    
+        Array.from(this.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = document.createElement("img");
+                img.src = e.target.result;
+                img.style.maxWidth = "100px";
+                img.style.borderRadius = "6px";
+                img.style.border = "1px solid #ccc";
+                contenedor.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        });
+    });
     
     // Obtener elementos
     tipoContenido = document.getElementById("tipo_contenido");
@@ -222,48 +239,84 @@ function initCopiarTexto() {
     };
 }
 
-function initGenerarPost() {
-    const generarButton = document.getElementById("generarPost");
-    if (!generarButton) return;
-
-    generarButton.addEventListener("click", function() {
-        const ideaInput = document.getElementById("idea");
-        if (ideaInput.value.trim() === "") {
-            alert("Por favor, ingresa una idea para generar el post.");
-            ideaInput.focus();
-            return;
-        }
-        generarButton.disabled = true;
-        generarButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
-        const formData = new FormData(document.getElementById("generadorForm"));
-        formData.append("action", "generar_contenido");
-        formData.append("nonce", AICG.nonce);
-
-        const keywords = Array.from(document.querySelectorAll('.keyword-group')).map(group => ({
-            keyword: group.querySelector('input[name^="keyword"]').value.trim(),
-            link: group.querySelector('input[name^="enlace"]').value.trim()
-        })).filter(kw => kw.keyword && kw.link);
-        formData.append("keywords", JSON.stringify(keywords));
-
-        fetch(AICG.ajax_url, { method: "POST", body: formData })
-            .then(response => response.json())
-            .then(data => handleGenerarPostResponse(data, generarButton))
-            .catch(error => handleAjaxError(error, generarButton, 'Generar Contenido'));
-    });
+function cleanContent(content) {
+    // Eliminar las comillas markdown del inicio y final
+    return content.replace(/^```html\s*|\s*```$/gm, '').trim();
 }
 
-function handleGenerarPostResponse(data, button) {
-    button.disabled = false;
-    button.innerHTML = '<i class="fas fa-cogs"></i> Generar Contenido';
-    if (data.success) {
-        document.getElementById("tituloEdit").value = data.data.title;
-        document.getElementById("contenidoEdit").value = data.data.content;
-        document.getElementById("tituloText").value = data.data.title;
-        document.getElementById("contenidoText").value = data.data.content.replace(/<[^>]*>/g, '');
-        document.getElementById("contenidoText").disabled = false;
-    } else {
-        alert("Error al generar contenido: " + data.data);
+function initGenerarPost() {
+    const generarButton = document.getElementById('generarPost');
+    if (!generarButton) {
+        console.error('Botón generarPost no encontrado');
+        return;
     }
+
+    generarButton.addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        const ideaInput = document.getElementById('idea');
+        if (!ideaInput || !ideaInput.value.trim()) {
+            alert('Por favor, ingresa una idea para el contenido.');
+            return;
+        }
+
+        const form = document.getElementById('generadorForm');
+        if (!form) {
+            console.error('Formulario no encontrado');
+            return;
+        }
+
+        // Recolectar keywords
+        const keywords = [];
+        const keywordInputs = document.querySelectorAll('.keyword-group');
+        keywordInputs.forEach(group => {
+            const keyword = group.querySelector('.keyword-input')?.value;
+            const link = group.querySelector('.keyword-link')?.value;
+            if (keyword && link) {
+                keywords.push({ keyword, link });
+            }
+        });
+
+        // Mostrar loading
+        generarButton.disabled = true;
+        generarButton.textContent = 'Generando...';
+
+        try {
+            const formData = new FormData(form);
+            formData.append('action', 'generar_contenido');
+            formData.append('nonce', AICG.nonce);
+            formData.append('keywords', JSON.stringify(keywords));
+
+            const response = await fetch(AICG.ajax_url, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            console.log('Respuesta del servidor:', data);
+
+            if (data.success) {
+                // Limpiar el contenido antes de mostrarlo
+                const cleanContent = cleanContent(data.data.content);
+                
+                // Actualizar el título y contenido
+                document.getElementById('title').value = data.data.title;
+                quill.root.innerHTML = cleanContent;
+                
+                // Mostrar el contenido generado
+                document.getElementById('contenidoGenerado').style.display = 'block';
+            } else {
+                alert(data.data || 'Error al generar el contenido');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al generar el contenido. Por favor, intenta de nuevo.');
+        } finally {
+            // Restaurar el botón
+            generarButton.disabled = false;
+            generarButton.textContent = 'Generar Contenido';
+        }
+    });
 }
 
 function initPublicarPost() {
@@ -273,7 +326,7 @@ function initPublicarPost() {
         return;
     }
 
-    publicarButton.addEventListener("click", function() {
+    publicarButton.addEventListener("click", async function() {
         const contenido = document.getElementById("contenidoEdit").value.trim();
         if (contenido === "") {
             alert("Cuidado!: Debes generar el contenido antes de publicar algo.");
@@ -290,49 +343,53 @@ function initPublicarPost() {
         publicarButton.disabled = true;
         publicarButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
 
-        const formData = new FormData();
-        formData.append("action", "publicar_post");
-        formData.append("nonce", AICG.nonce);
-        formData.append("title", document.getElementById("tituloEdit").value);
-        formData.append("content", document.getElementById("contenidoEdit").value);
-        
-        const imagenesInput = document.getElementById("imagenes");
-        if (imagenesInput && imagenesInput.files && imagenesInput.files.length > 0) {
-            for (const file of imagenesInput.files) {
-                formData.append("imagenes[]", file);
+        try {
+            const formData = new FormData();
+            formData.append("action", "publicar_post");
+            formData.append("nonce", AICG.nonce);
+            formData.append("title", document.getElementById("tituloEdit").value);
+            formData.append("content", contenido);
+            
+            const imagenesInput = document.getElementById("imagenes");
+            if (imagenesInput && imagenesInput.files && imagenesInput.files.length > 0) {
+                for (let i = 0; i < imagenesInput.files.length; i++) {
+                    formData.append(`imagenes[${i}]`, imagenesInput.files[i]);
+                }
             }
+
+            const response = await fetch(AICG.ajax_url, { 
+                method: "POST", 
+                body: formData 
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Respuesta del servidor:', data);
+
+            if (data.success) {
+                const postLink = document.getElementById("postLink");
+                postLink.href = data.data;
+                postLink.innerText = `¡Post creado con éxito!`;
+                document.getElementById("postCreatedButton").style.display = "block";
+                
+                // Limpiar el input de imágenes después de una publicación exitosa
+                if (imagenesInput) {
+                    imagenesInput.value = '';
+                }
+            } else {
+                throw new Error(data.data || 'Error desconocido al publicar el post');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert("Error al publicar el post: " + error.message);
+        } finally {
+            publicarButton.disabled = false;
+            publicarButton.innerHTML = '<i class="fas fa-paper-plane"></i> Publicar';
         }
-
-        fetch(AICG.ajax_url, { 
-            method: "POST", 
-            body: formData 
-        })
-        .then(response => {
-            console.log('Status de la respuesta:', response.status);
-            return response.json();
-        })
-        .then(data => handlePublicarPostResponse(data, publicarButton))
-        .catch(error => {
-            console.error('Error en la petición:', error);
-            handleAjaxError(error, publicarButton, 'Publicar');
-        });
     });
-}
-
-function handlePublicarPostResponse(data, button) {
-    console.log('Respuesta del servidor:', data); // Log de la respuesta
-    button.disabled = false;
-    button.innerHTML = '<i class="fas fa-paper-plane"></i> Publicar';
-    
-    if (data.success) {
-        const postLink = document.getElementById("postLink");
-        postLink.href = data.data;
-        postLink.innerText = `¡Post creado con éxito!`;
-        document.getElementById("postCreatedButton").style.display = "block";
-    } else {
-        console.error('Error al publicar:', data.data); // Log del error
-        alert("Error al publicar el post: " + (data.data || 'Error desconocido'));
-    }
 }
 
 function initEnviarCorreo() {
@@ -394,3 +451,32 @@ function initPostCreatedButton() {
         });
     }
 }
+
+function testCleanContent() {
+    const testContent = `\`\`\`html
+<p>El <strong>marketing digital</strong> es esencial para alcanzar el éxito hoy en día. Con estrategias efectivas, puedes llegar a más clientes y aumentar tus ventas.</p>
+<p>Las <strong>redes sociales</strong> son una herramienta clave. Plataformas como Instagram y Facebook te permiten conectar con tu audiencia de manera directa y creativa.</p>
+<p>Además, el <strong>SEO</strong> ayuda a que tu sitio web aparezca en los primeros resultados de búsqueda. Esto aumenta tu visibilidad y credibilidad.</p>
+<p>No olvides el poder del <strong>email marketing</strong>. Envía contenido relevante y ofertas especiales para mantener a tus clientes interesados.</p>
+<p>¿Listo para llevar tu negocio al siguiente nivel? ¡El marketing digital es tu aliado!</p>
+\`\`\``;
+
+    console.log('Contenido original:', testContent);
+    const cleanedContent = cleanContent(testContent);
+    console.log('Contenido limpio:', cleanedContent);
+    
+    // Mostrar el resultado en la consola
+    console.log('¿Se eliminaron las comillas?', !cleanedContent.includes('```html'));
+}
+
+// Agregar botón de prueba al DOM
+document.addEventListener('DOMContentLoaded', function() {
+    const testButton = document.createElement('button');
+    testButton.textContent = 'Probar Limpieza';
+    testButton.style.position = 'fixed';
+    testButton.style.bottom = '10px';
+    testButton.style.right = '10px';
+    testButton.style.zIndex = '9999';
+    testButton.onclick = testCleanContent;
+    document.body.appendChild(testButton);
+});
