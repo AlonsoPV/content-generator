@@ -30,11 +30,23 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function initElementos() {
     console.log('Iniciando initElementos');
-    document.getElementById("imagenes").addEventListener("change", function () {
+    const imagenesInput = document.getElementById("imagenes");
+    if (!imagenesInput) {
+        console.error('No se encontró el input de imágenes');
+        return;
+    }
+
+    imagenesInput.addEventListener("change", function () {
+        console.log('Cambio detectado en input de imágenes:', this.files);
         const contenedor = document.getElementById("preview-contenedor");
+        if (!contenedor) {
+            console.error('No se encontró el contenedor de preview');
+            return;
+        }
         contenedor.innerHTML = ""; // limpiar previos
     
         Array.from(this.files).forEach(file => {
+            console.log('Procesando archivo:', file.name);
             const reader = new FileReader();
             reader.onload = function (e) {
                 const img = document.createElement("img");
@@ -51,7 +63,7 @@ function initElementos() {
     // Obtener elementos
     tipoContenido = document.getElementById("tipo_contenido");
     publicarBtn = document.getElementById("publicarPost");
-    imagenesDiv = document.querySelector(".form-group#imagenes");
+    imagenesDiv = document.getElementById("imagenes-wrapper");
     emailForm = document.getElementById("email-form");
     enviarCorreoBtn = document.getElementById("enviarCorreo");
     emailStatus = document.getElementById("emailStatus");
@@ -353,7 +365,7 @@ function initPublicarPost() {
             const imagenesInput = document.getElementById("imagenes");
             if (imagenesInput && imagenesInput.files && imagenesInput.files.length > 0) {
                 for (let i = 0; i < imagenesInput.files.length; i++) {
-                    formData.append(`imagenes[${i}]`, imagenesInput.files[i]);
+                    formData.append("imagenes[]", imagenesInput.files[i]);
                 }
             }
 
@@ -480,3 +492,11 @@ document.addEventListener('DOMContentLoaded', function() {
     testButton.onclick = testCleanContent;
     document.body.appendChild(testButton);
 });
+
+
+formData.append("action", "test_upload_images");
+formData.append("nonce", AICG.nonce);
+
+for (let i = 0; i < imagenesInput.files.length; i++) {
+    formData.append("imagenes[]", imagenesInput.files[i]);
+}

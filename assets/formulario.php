@@ -4,7 +4,7 @@
 <div class="generador-contenido">
   <div class="formulario">
     <h2>¡Genera tu idea! 84132b46-bdb1-47b9-841c-d4dbc9be6229</h2>
-    <form id="generadorForm">
+    <form id="generadorForm" method="post" enctype="multipart/form-data">
       <div class="form-row">
         <div class="form-group">
           <label for="tipo_contenido">
@@ -55,7 +55,7 @@
             <div class="info-wrapper">
               <span class="info-icon">ℹ️</span>
               <span class="tooltip">🌍 Selecciona el idioma del contenido.
-El idioma determina la lengua en la que se generará el texto, asegurando que el mensaje sea claro y natural para la audiencia objetivo.</span>
+                El idioma determina la lengua en la que se generará el texto, asegurando que el mensaje sea claro y natural para la audiencia objetivo.</span>
             </div>
           <select name="idioma" id="idioma">
             <option value="es">Español</option>
@@ -69,7 +69,7 @@ El idioma determina la lengua en la que se generará el texto, asegurando que el
             <div class="info-wrapper">
               <span class="info-icon">ℹ️</span>
               <span class="tooltip">✏️ Establece la extensión del contenido.
-La longitud define cuántas palabras tendrá el texto, afectando la profundidad y el nivel de detalle.</span>
+              La longitud define cuántas palabras tendrá el texto, afectando la profundidad y el nivel de detalle.</span>
             </div>
           <input type="number" id="longitud" name="longitud" value="100" min="100" max="2000" step="25">
         </div>
@@ -81,7 +81,7 @@ La longitud define cuántas palabras tendrá el texto, afectando la profundidad 
               <span class="info-icon">ℹ️</span>
               <span class="tooltip">
             📌 Define la personalidad del contenido.
-Elegir el tono adecuado determina si tu mensaje será formal, amigable, persuasivo o inspirador.</span>
+            Elegir el tono adecuado determina si tu mensaje será formal, amigable, persuasivo o inspirador.</span>
             </div>
           <select name="sentimiento" id="sentimiento">
             <option value="positivo">Positivo – Ideal para mensajes motivadores o inspiradores.</option>
@@ -101,7 +101,7 @@ Elegir el tono adecuado determina si tu mensaje será formal, amigable, persuasi
             <div class="info-wrapper">
               <span class="info-icon">ℹ️</span>
               <span class="tooltip">✅ Estilo
-🖋️ Configura la forma de expresión del contenido.
+              🖋️ Configura la forma de expresión del contenido.
 El estilo define cómo se presentará la información: narrativo, técnico, conversacional o directo.</span>
             </div>
           <select name="estilo" id="estilo">
@@ -120,6 +120,12 @@ El estilo define cómo se presentará la información: narrativo, técnico, conv
       <div id="keywords-container" class="keywords-grid"></div>
       <button type="button" id="add-keyword-button" class="btn-add-keyword">
         <i class="fas fa-plus"></i> Añadir palabra clave </button>
+        <div class="form-group" id="imagenes-wrapper">
+      <label for="imagenes"><i class="fas fa-images"></i> Subir imágenes:</label>
+      <input type="file" id="imagenes" name="imagenes[]" multiple accept="image/*">
+      <div id="preview-contenedor" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;"></div>
+
+    </div>
       <button type="button" id="generarPost" class="btn-generar">
         <i class="fas fa-cogs"></i> Generar</button>
     </form>
@@ -141,12 +147,7 @@ El estilo define cómo se presentará la información: narrativo, técnico, conv
         <button onclick="copiarTexto()"><i class="fas fa-copy"></i> Copiar texto plano</button>
       </div>
     </div>
-    <div class="form-group" id="imagenes">
-      <label for="imagenes"><i class="fas fa-images"></i> Subir imágenes:</label>
-      <input type="file" id="imagenes" name="imagenes[]" multiple accept="image/*">
-      <div id="preview-contenedor" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;"></div>
 
-    </div>
     <button id="publicarPost" class="btn-publicar">
       <i class="fas fa-paper-plane"></i> Publicar</button>
     <div id="postCreatedButton" style="display: none;">

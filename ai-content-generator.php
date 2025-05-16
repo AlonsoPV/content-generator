@@ -203,6 +203,10 @@ function aicg_generar_contenido_ajax() {
 // AJAX: Publicar post
 add_action('wp_ajax_publicar_post', 'aicg_publicar_post_ajax');
 function aicg_publicar_post_ajax() {
+    error_log('Iniciando publicación de post');
+    error_log('FILES recibidos: ' . print_r($_FILES, true));
+    error_log('POST recibidos: ' . print_r($_POST, true));
+    
     try {
         check_ajax_referer('generador_nonce', 'nonce');
 
@@ -230,97 +234,112 @@ function aicg_publicar_post_ajax() {
         }
 
         // Subir imágenes
-        // Subir imágenes
-$imagenes_urls = [];
+        $imagenes_urls = [];
 
-if (!empty($_FILES['imagenes']['name'][0])) {
-    require_once(ABSPATH . 'wp-admin/includes/image.php');
-    require_once(ABSPATH . 'wp-admin/includes/file.php');
-    require_once(ABSPATH . 'wp-admin/includes/media.php');
+        if (!empty($_FILES['imagenes']['name'][0])) {
+            error_log('Procesando imágenes...');
+            require_once(ABSPATH . 'wp-admin/includes/image.php');
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+            require_once(ABSPATH . 'wp-admin/includes/media.php');
 
-    $files = $_FILES['imagenes'];
-    foreach ($files['name'] as $key => $value) {
-        if (!empty($files['name'][$key])) {
-            $file = [
-                'name'     => $files['name'][$key],
-                'type'     => $files['type'][$key],
-                'tmp_name' => $files['tmp_name'][$key],
-                'error'    => $files['error'][$key],
-                'size'     => $files['size'][$key],
-            ];
+            $files = $_FILES['imagenes'];
+            foreach ($files['name'] as $key => $value) {
+                if (!empty($files['name'][$key])) {
+                    error_log("Procesando imagen {$key}: {$files['name'][$key]}");
+                    
+                    $file = [
+                        'name'     => $files['name'][$key],
+                        'type'     => $files['type'][$key],
+                        'tmp_name' => $files['tmp_name'][$key],
+                        'error'    => $files['error'][$key],
+                        'size'     => $files['size'][$key],
+                    ];
 
-            // Subida segura con compatibilidad completa
-            $attachment_id = media_handle_sideload($file, 0);
+                    error_log('Datos del archivo: ' . print_r($file, true));
 
-            if (is_wp_error($attachment_id)) {
-                error_log('Error al subir imagen: ' . $attachment_id->get_error_message());
-                continue;
+                    // Verificar errores de subida
+                    if ($file['error'] !== UPLOAD_ERR_OK) {
+                        error_log('Error en subida de archivo: ' . $file['error']);
+                        continue;
+                    }
+
+                    // Subida segura con compatibilidad completa
+                    $attachment_id = media_handle_sideload($file, 0);
+
+                    if (is_wp_error($attachment_id)) {
+                        error_log('Error al subir imagen: ' . $attachment_id->get_error_message());
+                        continue;
+                    }
+
+                    $url = wp_get_attachment_url($attachment_id);
+                    error_log("Imagen subida exitosamente. ID: {$attachment_id}, URL: {$url}");
+
+                    $imagenes_urls[] = [
+                        'id'   => $attachment_id,
+                        'url'  => $url
+                    ];
+                }
             }
-
-            $imagenes_urls[] = [
-                'id'   => $attachment_id,
-                'url'  => wp_get_attachment_url($attachment_id)
-            ];
+        } else {
+            error_log('No se encontraron imágenes para subir');
         }
-    }
-}
 
-// Crear contenido con imágenes flotantes
-$content_with_images = '';
+        // Crear contenido con imágenes flotantes
+        $content_with_images = '';
 
-foreach ($imagenes_urls as $index => $imagen) {
-    $url = esc_url($imagen['url']);
+        foreach ($imagenes_urls as $index => $imagen) {
+            $url = esc_url($imagen['url']);
 
-    if ($index === 0) {
-        // Imagen centrada
-        $content_with_images .= "<div style='text-align: center; margin-bottom: 20px;'>
-                                    <img src='{$url}' alt='Imagen destacada' style='width: 100%; max-width: 750px; height: auto; border-radius: 10px;'>
-                                 </div>";
-    } else {
-        // Alternar izquierda/derecha
-        $float = ($index % 2 === 0) ? 'left' : 'right';
-        $margin = $float === 'left' ? 'margin-right: 20px;' : 'margin-left: 20px;';
-        $content_with_images .= "<figure style='float: {$float}; {$margin} margin-bottom: 20px; width: 45%; max-width: 400px;'>
-                                    <img src='{$url}' alt='Imagen' style='width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);'>
-                                 </figure>";
-    }
-}
+            if ($index === 0) {
+                // Imagen centrada
+                $content_with_images .= "<div style='text-align: center; margin-bottom: 20px;'>
+                                            <img src='{$url}' alt='Imagen destacada' style='width: 100%; max-width: 750px; height: auto; border-radius: 10px;'>
+                                        </div>";
+            } else {
+                // Alternar izquierda/derecha
+                $float = ($index % 2 === 0) ? 'left' : 'right';
+                $margin = $float === 'left' ? 'margin-right: 20px;' : 'margin-left: 20px;';
+                $content_with_images .= "<figure style='float: {$float}; {$margin} margin-bottom: 20px; width: 45%; max-width: 400px;'>
+                                            <img src='{$url}' alt='Imagen' style='width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);'>
+                                        </figure>";
+            }
+        }
 
-$content_with_images .= '<div style="clear: both;"></div>';
+        $content_with_images .= '<div style="clear: both;"></div>';
 
-// Combinar imágenes con contenido original
-$contenido_final = $content_with_images . $contenido;
+        // Combinar imágenes con contenido original
+        $contenido_final = $content_with_images . $contenido;
 
-// Crear el post
-$nuevo_post = [
-    'post_title'   => $titulo,
-    'post_content' => $contenido_final,
-    'post_status'  => 'publish',
-    'post_author'  => get_current_user_id(),
-    'post_type'    => 'post',
-];
+        // Crear el post
+        $nuevo_post = [
+            'post_title'   => $titulo,
+            'post_content' => $contenido_final,
+            'post_status'  => 'publish',
+            'post_author'  => get_current_user_id(),
+            'post_type'    => 'post',
+        ];
 
-$post_id = wp_insert_post($nuevo_post);
+        $post_id = wp_insert_post($nuevo_post);
 
-if (is_wp_error($post_id)) {
-    error_log('Error al crear post: ' . $post_id->get_error_message());
-    wp_send_json_error('No se pudo crear el post');
-}
+        if (is_wp_error($post_id)) {
+            error_log('Error al crear post: ' . $post_id->get_error_message());
+            wp_send_json_error('No se pudo crear el post');
+        }
 
-// Asociar imágenes al post y destacar la primera
-foreach ($imagenes_urls as $i => $img) {
-    wp_update_post([
-        'ID' => $img['id'],
-        'post_parent' => $post_id,
-    ]);
+        // Asociar imágenes al post y destacar la primera
+        foreach ($imagenes_urls as $i => $img) {
+            wp_update_post([
+                'ID' => $img['id'],
+                'post_parent' => $post_id,
+            ]);
 
-    if ($i === 0) {
-        set_post_thumbnail($post_id, $img['id']);
-    }
-}
+            if ($i === 0) {
+                set_post_thumbnail($post_id, $img['id']);
+            }
+        }
 
-clean_post_cache($post_id);
-wp_cache_delete($post_id, 'posts');
+        clean_post_cache($post_id);
+        wp_cache_delete($post_id, 'posts');
         wp_cache_delete($post_id, 'post_meta');
 
         // Limpiar caché de imágenes
@@ -447,3 +466,41 @@ add_action('wp_ajax_test_ai21_connection', function() {
         wp_send_json_error('Error de API: ' . $error_message);
     }
 }); 
+
+add_action('wp_ajax_test_upload_images', 'test_upload_images');
+function test_upload_images() {
+    if (!current_user_can('upload_files')) {
+        wp_send_json_error("Sin permisos");
+    }
+
+    error_log("✅ Entrando a test_upload_images");
+    error_log(print_r($_FILES, true));
+
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+    require_once(ABSPATH . 'wp-admin/includes/file.php');
+    require_once(ABSPATH . 'wp-admin/includes/media.php');
+
+    $results = [];
+
+    if (!empty($_FILES['imagenes']['name'][0])) {
+        foreach ($_FILES['imagenes']['name'] as $i => $name) {
+            $file = [
+                'name'     => $_FILES['imagenes']['name'][$i],
+                'type'     => $_FILES['imagenes']['type'][$i],
+                'tmp_name' => $_FILES['imagenes']['tmp_name'][$i],
+                'error'    => $_FILES['imagenes']['error'][$i],
+                'size'     => $_FILES['imagenes']['size'][$i],
+            ];
+
+            $id = media_handle_sideload($file, 0);
+
+            if (is_wp_error($id)) {
+                $results[] = ['error' => $id->get_error_message()];
+            } else {
+                $results[] = ['id' => $id, 'url' => wp_get_attachment_url($id)];
+            }
+        }
+    }
+
+    wp_send_json_success($results);
+}
