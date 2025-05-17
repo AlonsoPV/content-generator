@@ -146,8 +146,7 @@ function aicg_generar_contenido_ajax() {
     }
     $keywords_string = rtrim($keywords_string, ', ');
 
-    $prompt = "Escribe contenido sobre '$palabra_clave' que contenga la estructura y este adaptado para la plataforma $tipo_contenido en idioma '$idioma' con un tono '$sentimiento' y estilo '$estilo'. \nIncorpora las siguientes palabras clave: $keywords_string (asegúrate de usarlas todas). Dale la estructura dependiendo de la plataforma elegida. Asegura poner el titulo en las tags de h1 <h1>. Escribe oraciones cortas pero impactantes. No uses frases como 'En conlusión' 'En resumen' o 'para resumir'. Evita ser repetitivo.\nEl contenido debe ser fidedigno, verificable y en formato HTML válido, con la siguiente estructura:\n- Párrafos envueltos en <p>.\n- Enlaces con la etiqueta <a> con href y target='_blank'.\n- No incluyas backticks, etiquetas de código, ni la palabra 'html' antes o después del contenido.\n- Solo devuelve HTML válido y estructurado. Nada más.\nDebe tener aproximadamente y maximo de '$longitud' palabras.";
-
+    $prompt = "Escribe contenido sobre '$palabra_clave' que contenga la estructura y este adaptado para la plataforma $tipo_contenido en idioma '$idioma' con un tono '$sentimiento' y estilo '$estilo'. \nIncorpora de manera orgánica y que haga lógica las siguientes palabras clave: $keywords_string (asegúrate de usarlas todas, en caso de que no haya no las incluyas). Dale la estructura dependiendo de la plataforma elegida. Asegura poner el titulo en las tags de h1 <h1>. No uses frases como 'En conlusión' 'En resumen' o 'para resumir'. Evita ser repetitivo.\nEl contenido debe ser fidedigno, verificable y en formato HTML válido, con la siguiente estructura:\n- Párrafos envueltos en <p>.\n- Enlaces con la etiqueta <a> con href y target='_blank'.\n- No incluyas backticks, etiquetas de código, ni la palabra 'html' antes o después del contenido.\n- Solo devuelve HTML válido y estructurado. Nada más.\nDebe tener aproximadamente y maximo de '$longitud' palabras. Asegurate de que el contenido tenga sentido y haga lógica.";
     $data = array(
         "model" => "jamba-large-1.6",
         "messages" => array(
@@ -286,29 +285,37 @@ function aicg_publicar_post_ajax() {
 
         // Crear contenido con imágenes flotantes
         $content_with_images = '';
+        $imagenes_count = count($imagenes_urls);
 
-        foreach ($imagenes_urls as $index => $imagen) {
-            $url = esc_url($imagen['url']);
+        // Contenido generado primero
+        $content_with_images .= $contenido;
 
-            if ($index === 0) {
-                // Imagen centrada
-                $content_with_images .= "<div style='text-align: center; margin-bottom: 20px;'>
-                                            <img src='{$url}' alt='Imagen destacada' style='width: 100%; max-width: 750px; height: auto; border-radius: 10px;'>
-                                        </div>";
-            } else {
-                // Alternar izquierda/derecha
-                $float = ($index % 2 === 0) ? 'left' : 'right';
+        // Primera imagen centrada después del contenido
+        if ($imagenes_count > 0) {
+            $url = esc_url($imagenes_urls[0]['url']);
+            $content_with_images .= "<div style='text-align: center; margin-top: 24px;'>\n";
+            $content_with_images .= "<img src='{$url}' alt='Imagen destacada' style='width: 100%; max-width: 450px; height: auto; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);'>\n";
+            $content_with_images .= "</div>\n";
+        }
+
+        // Imágenes adicionales al final, alternando flotado
+        if ($imagenes_count > 1) {
+            $content_with_images .= "<div style='display: flex; flex-wrap: wrap; gap: 24px; margin-top: 32px; justify-content: center;'>\n";
+            for ($i = 1; $i < $imagenes_count; $i++) {
+                $url = esc_url($imagenes_urls[$i]['url']);
+                $float = ($i % 2 === 0) ? 'left' : 'right';
                 $margin = $float === 'left' ? 'margin-right: 20px;' : 'margin-left: 20px;';
-                $content_with_images .= "<figure style='float: {$float}; {$margin} margin-bottom: 20px; width: 45%; max-width: 400px;'>
-                                            <img src='{$url}' alt='Imagen' style='width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);'>
-                                        </figure>";
+                $content_with_images .= "<figure style='flex: 1 1 300px; max-width: 400px; min-width: 220px; text-align: center; {$margin} margin-bottom: 20px;'>\n";
+                $content_with_images .= "<img src='{$url}' alt='Imagen' style='width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.10);'>\n";
+                $content_with_images .= "</figure>\n";
             }
+            $content_with_images .= "</div>\n";
         }
 
         $content_with_images .= '<div style="clear: both;"></div>';
 
         // Combinar imágenes con contenido original
-        $contenido_final = $content_with_images . $contenido;
+        $contenido_final = $content_with_images;
 
         // Crear el post
         $nuevo_post = [
