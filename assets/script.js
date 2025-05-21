@@ -2,7 +2,7 @@
 
 console.log('Script cargado - inicio del archivo');
 
-// Variables globales (solo una vez)
+// Variables globales
 let tituloEdit, tituloText, contenidoEdit, contenidoText, tipoContenido, publicarBtn, imagenesDiv, emailForm, enviarCorreoBtn, emailStatus;
 let isInitialized = false;
 
@@ -13,6 +13,32 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     
     console.log('DOMContentLoaded ejecutado');
+    
+    // Inicializar elementos primero
+    tituloEdit = document.getElementById("tituloEdit");
+    tituloText = document.getElementById("tituloText");
+    contenidoEdit = document.getElementById("contenidoEdit");
+    contenidoText = document.getElementById("contenidoText");
+    tipoContenido = document.getElementById("tipo_contenido");
+    publicarBtn = document.getElementById("publicarPost");
+    imagenesDiv = document.getElementById("imagenes-wrapper");
+    emailForm = document.getElementById("email-form");
+    enviarCorreoBtn = document.getElementById("enviarCorreo");
+    emailStatus = document.getElementById("emailStatus");
+
+    // Verificar elementos críticos
+    if (!tituloEdit) console.error('No se encontró el elemento tituloEdit');
+    if (!tituloText) console.error('No se encontró el elemento tituloText');
+    if (!contenidoEdit) console.error('No se encontró el elemento contenidoEdit');
+    if (!contenidoText) console.error('No se encontró el elemento contenidoText');
+    if (!tipoContenido) console.error('No se encontró el elemento tipoContenido');
+    if (!publicarBtn) console.error('No se encontró el elemento publicarPost');
+    if (!imagenesDiv) console.error('No se encontró el elemento imagenes-wrapper');
+    if (!emailForm) console.error('No se encontró el elemento email-form');
+    if (!enviarCorreoBtn) console.error('No se encontró el elemento enviarCorreo');
+    if (!emailStatus) console.error('No se encontró el elemento emailStatus');
+
+    // Inicializar funcionalidades
     initElementos();
     initMostrarBoton();
     initTituloSync();
@@ -43,37 +69,108 @@ function initElementos() {
             console.error('No se encontró el contenedor de preview');
             return;
         }
+
+        // Verificar si ya hay una imagen cargada
+        if (contenedor.children.length > 0) {
+            alert('Solo puedes cargar una imagen a la vez. Por favor, elimina la imagen actual antes de cargar una nueva.');
+            this.value = ''; // Limpiar el input
+            return;
+        }
+
+        // Verificar si se intenta cargar más de una imagen
+        if (this.files.length > 1) {
+            alert('Solo puedes cargar una imagen a la vez.');
+            this.value = ''; // Limpiar el input
+            return;
+        }
+
         contenedor.innerHTML = ""; // limpiar previos
     
-        Array.from(this.files).forEach(file => {
+        Array.from(this.files).forEach((file, index) => {
             console.log('Procesando archivo:', file.name);
             const reader = new FileReader();
             reader.onload = function (e) {
+                const imgContainer = document.createElement("div");
+                imgContainer.style.position = "relative";
+                imgContainer.style.display = "inline-block";
+                imgContainer.style.margin = "5px";
+                imgContainer.style.cursor = "pointer";
+
                 const img = document.createElement("img");
                 img.src = e.target.result;
                 img.style.maxWidth = "100px";
                 img.style.borderRadius = "6px";
                 img.style.border = "1px solid #ccc";
-                contenedor.appendChild(img);
+                img.style.transition = "all 0.3s ease";
+
+                const removeBtn = document.createElement("button");
+                removeBtn.innerHTML = "×";
+                removeBtn.style.position = "absolute";
+                removeBtn.style.top = "-10px";
+                removeBtn.style.right = "-10px";
+                removeBtn.style.width = "20px";
+                removeBtn.style.height = "20px";
+                removeBtn.style.borderRadius = "50%";
+                removeBtn.style.background = "#ff4444";
+                removeBtn.style.color = "white";
+                removeBtn.style.border = "none";
+                removeBtn.style.cursor = "pointer";
+                removeBtn.style.display = "none"; // Oculto por defecto
+                removeBtn.style.alignItems = "center";
+                removeBtn.style.justifyContent = "center";
+                removeBtn.style.fontSize = "16px";
+                removeBtn.style.padding = "0";
+                removeBtn.style.lineHeight = "1";
+                removeBtn.style.zIndex = "2";
+
+                // Mostrar/ocultar botón al hacer clic en la imagen
+                imgContainer.addEventListener("click", function(e) {
+                    if (e.target === img) {
+                        const isSelected = imgContainer.classList.contains("selected");
+                        // Deseleccionar todas las imágenes
+                        document.querySelectorAll("#preview-contenedor > div").forEach(div => {
+                            div.classList.remove("selected");
+                            div.querySelector("button").style.display = "none";
+                            div.querySelector("img").style.border = "1px solid #ccc";
+                        });
+                        
+                        if (!isSelected) {
+                            // Seleccionar esta imagen
+                            imgContainer.classList.add("selected");
+                            removeBtn.style.display = "flex";
+                            img.style.border = "2px solid #0073aa";
+                        }
+                    }
+                });
+
+                removeBtn.addEventListener("click", function(e) {
+                    e.stopPropagation(); // Evitar que el clic se propague al contenedor
+                    // Crear un nuevo FileList sin la imagen eliminada
+                    const dt = new DataTransfer();
+                    const files = imagenesInput.files;
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        if (i !== index) {
+                            dt.items.add(files[i]);
+                        }
+                    }
+                    
+                    // Actualizar el input con las imágenes restantes
+                    imagenesInput.files = dt.files;
+                    
+                    // Eliminar el contenedor de la imagen
+                    imgContainer.remove();
+                });
+
+                imgContainer.appendChild(img);
+                imgContainer.appendChild(removeBtn);
+                contenedor.appendChild(imgContainer);
             };
             reader.readAsDataURL(file);
         });
     });
     
-    // Obtener elementos
-    tipoContenido = document.getElementById("tipo_contenido");
-    publicarBtn = document.getElementById("publicarPost");
-    imagenesDiv = document.getElementById("imagenes-wrapper");
-    emailForm = document.getElementById("email-form");
-    enviarCorreoBtn = document.getElementById("enviarCorreo");
-    emailStatus = document.getElementById("emailStatus");
-    
-    // Verificar elementos críticos
-    if (!tipoContenido) console.error('No se encontró el elemento tipo_contenido');
-    if (!publicarBtn) console.error('No se encontró el elemento publicarPost');
-    if (!imagenesDiv) console.error('No se encontró el elemento imagenes');
-    if (!emailForm) console.error('No se encontró el elemento email-form');
-    
+    // Verificar elementos
     console.log('Estado de elementos después de init:', {
         tipoContenido: !!tipoContenido,
         publicarBtn: !!publicarBtn,
@@ -257,110 +354,132 @@ function cleanContent(content) {
 }
 
 function initGenerarPost() {
-    const generarButton = document.getElementById('generarPost');
-    if (!generarButton) {
-        console.error('Botón generarPost no encontrado');
+    const form = document.getElementById('generadorForm');
+    if (!form) {
+        console.error('No se encontró el formulario generadorForm');
         return;
     }
 
-    generarButton.addEventListener('click', async function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const ideaInput = document.getElementById('idea');
-        if (!ideaInput || !ideaInput.value.trim()) {
-            alert('Por favor, ingresa una idea para el contenido.');
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (!submitButton) {
+            console.error('No se encontró el botón submit');
             return;
         }
 
-        const form = document.getElementById('generadorForm');
-        if (!form) {
-            console.error('Formulario no encontrado');
-            return;
-        }
-
-        // Recolectar keywords
-        const keywords = [];
-        const keywordInputs = document.querySelectorAll('.keyword-group');
-        keywordInputs.forEach(group => {
-            const keyword = group.querySelector('.keyword-input')?.value;
-            const link = group.querySelector('.keyword-link')?.value;
-            if (keyword && link) {
-                keywords.push({ keyword, link });
-            }
-        });
-
-        // Mostrar loading
-        generarButton.disabled = true;
-        generarButton.textContent = 'Generando...';
+        const originalText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = 'Generando...';
 
         try {
             const formData = new FormData(form);
             formData.append('action', 'generar_contenido');
             formData.append('nonce', AICG.nonce);
+
+            // Recolectar keywords
+            const keywords = [];
+            const keywordInputs = document.querySelectorAll('.keyword-group');
+            keywordInputs.forEach(group => {
+                const keyword = group.querySelector('input[type="text"]')?.value;
+                const link = group.querySelector('input[type="url"]')?.value;
+                if (keyword && link) {
+                    keywords.push({ keyword, link });
+                }
+            });
             formData.append('keywords', JSON.stringify(keywords));
 
-            const response = await fetch(AICG.ajax_url, {
+            const response = await fetch(AICG.ajaxurl, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'same-origin'
             });
 
-            const data = await response.json();
-            console.log('Respuesta del servidor:', data);
-
-            if (data.success) {
-                // Limpiar el contenido antes de mostrarlo
-                const cleanContent = cleanContent(data.data.content);
-                
-                // Actualizar el título y contenido
-                document.getElementById('title').value = data.data.title;
-                quill.root.innerHTML = cleanContent;
-                
-                // Mostrar el contenido generado
-                document.getElementById('contenidoGenerado').style.display = 'block';
-            } else {
-                alert(data.data || 'Error al generar el contenido');
+            // Verificar el tipo de contenido de la respuesta
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Respuesta no-JSON recibida:', text);
+                throw new Error('El servidor devolvió una respuesta no válida. Por favor, intenta de nuevo.');
             }
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.data || 'Error al generar el contenido');
+            }
+
+            // Actualizar el contenido en el editor
+            if (tituloEdit) {
+                tituloEdit.value = data.data.title;
+            }
+            if (tituloText) {
+                tituloText.value = data.data.title;
+            }
+
+            if (contenidoEdit) {
+                contenidoEdit.value = data.data.content;
+            }
+            if (contenidoText) {
+                contenidoText.value = htmlToText(data.data.content);
+            }
+
+            // Mostrar mensaje de éxito
+            const successMessage = document.createElement('div');
+            successMessage.className = 'notice notice-success is-dismissible';
+            successMessage.innerHTML = '<p>Contenido generado exitosamente.</p>';
+            form.insertAdjacentElement('beforebegin', successMessage);
+
+            // Eliminar el mensaje después de 5 segundos
+            setTimeout(() => {
+                successMessage.remove();
+            }, 5000);
+
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al generar el contenido. Por favor, intenta de nuevo.');
+            
+            // Mostrar mensaje de error
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'notice notice-error is-dismissible';
+            errorMessage.innerHTML = `<p>Error: ${error.message}</p>`;
+            form.insertAdjacentElement('beforebegin', errorMessage);
+
+            // Eliminar el mensaje después de 5 segundos
+            setTimeout(() => {
+                errorMessage.remove();
+            }, 5000);
         } finally {
-            // Restaurar el botón
-            generarButton.disabled = false;
-            generarButton.textContent = 'Generar Contenido';
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
         }
     });
 }
 
 function initPublicarPost() {
     const publicarButton = document.getElementById("publicarPost");
-    if (!publicarButton) {
-        console.error('No se encontró el botón de publicar');
-        return;
-    }
+    if (!publicarButton) return;
 
     publicarButton.addEventListener("click", async function() {
-        const contenido = document.getElementById("contenidoEdit").value.trim();
-        if (contenido === "") {
-            alert("Cuidado!: Debes generar el contenido antes de publicar algo.");
+        const titulo = document.getElementById("tituloEdit").value;
+        const contenido = document.getElementById("contenidoEdit").value;
+        const tipoContenido = document.getElementById("tipo_contenido").value;
+
+        if (!titulo || !contenido) {
+            alert("Por favor, completa todos los campos requeridos.");
             return;
         }
 
-        // Log de los datos que se enviarán
-        console.log('Enviando datos para publicar:', {
-            title: document.getElementById("tituloEdit").value,
-            contentLength: contenido.length,
-            hasImages: document.getElementById("imagenes")?.files?.length > 0
-        });
-
         publicarButton.disabled = true;
-        publicarButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
+        publicarButton.textContent = "Publicando...";
 
         try {
             const formData = new FormData();
             formData.append("action", "publicar_post");
             formData.append("nonce", AICG.nonce);
-            formData.append("title", document.getElementById("tituloEdit").value);
+            formData.append("title", titulo);
             formData.append("content", contenido);
+            formData.append("tipo_contenido", tipoContenido);
             
             const imagenesInput = document.getElementById("imagenes");
             if (imagenesInput && imagenesInput.files && imagenesInput.files.length > 0) {
@@ -369,7 +488,7 @@ function initPublicarPost() {
                 }
             }
 
-            const response = await fetch(AICG.ajax_url, { 
+            const response = await fetch(AICG.ajaxurl, { 
                 method: "POST", 
                 body: formData 
             });
@@ -382,24 +501,59 @@ function initPublicarPost() {
             console.log('Respuesta del servidor:', data);
 
             if (data.success) {
-                const postLink = document.getElementById("postLink");
-                postLink.href = data.data;
-                postLink.innerText = `¡Post creado con éxito!`;
-                document.getElementById("postCreatedButton").style.display = "block";
+                if (tipoContenido === 'linkedin') {
+                    alert('✅ Post publicado en LinkedIn correctamente.');
+                } else {
+                    const postLink = document.getElementById("postLink");
+                    postLink.href = data.data;
+                    postLink.innerText = `¡Post creado con éxito!`;
+                    document.getElementById("postCreatedButton").style.display = "block";
+                }
                 
                 // Limpiar el input de imágenes después de una publicación exitosa
                 if (imagenesInput) {
                     imagenesInput.value = '';
                 }
             } else {
-                throw new Error(data.data || 'Error desconocido al publicar el post');
+                let errorMessage = data.data || 'Error desconocido al publicar el post';
+                
+                // Manejar errores específicos de LinkedIn
+                if (tipoContenido === 'linkedin') {
+                    switch(true) {
+                        case errorMessage.includes('no_token'):
+                            errorMessage = 'No hay token de acceso configurado para LinkedIn. Por favor, configura las credenciales de LinkedIn en la página de ajustes.';
+                            break;
+                        case errorMessage.includes('empty_content'):
+                            errorMessage = 'El contenido no puede estar vacío. Por favor, agrega contenido antes de publicar.';
+                            break;
+                        case errorMessage.includes('content_too_long'):
+                            errorMessage = 'El contenido excede el límite de 3000 caracteres de LinkedIn. Por favor, reduce la longitud del contenido.';
+                            break;
+                        case errorMessage.includes('invalid_content'):
+                            errorMessage = 'El contenido contiene elementos no permitidos por LinkedIn. Por favor, revisa el contenido y elimina cualquier código JavaScript o elementos no permitidos.';
+                            break;
+                        case errorMessage.includes('unauthorized'):
+                            errorMessage = 'Tu sesión de LinkedIn ha expirado. Por favor, reconecta con LinkedIn en la página de ajustes.';
+                            break;
+                        case errorMessage.includes('forbidden'):
+                            errorMessage = 'No tienes permisos para publicar en LinkedIn. Verifica que tu cuenta tenga los permisos necesarios.';
+                            break;
+                        case errorMessage.includes('rate_limit'):
+                            errorMessage = 'Has excedido el límite de publicaciones en LinkedIn. Por favor, espera unos minutos antes de intentar nuevamente.';
+                            break;
+                        case errorMessage.includes('bad_request'):
+                            errorMessage = 'El formato del contenido no es válido para LinkedIn. Por favor, revisa el contenido y asegúrate de que cumpla con los requisitos de LinkedIn.';
+                            break;
+                    }
+                }
+                throw new Error(errorMessage);
             }
         } catch (error) {
             console.error('Error:', error);
             alert("Error al publicar el post: " + error.message);
         } finally {
             publicarButton.disabled = false;
-            publicarButton.innerHTML = '<i class="fas fa-paper-plane"></i> Publicar';
+            publicarButton.textContent = "Publicar Post";
         }
     });
 }
@@ -493,10 +647,164 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.appendChild(testButton);
 });
 
+jQuery(document).ready(function($) {
+    $('#test_api_connection').on('click', function() {
+        var button = $(this);
+        var statusDiv = $('#api_status');
 
-formData.append("action", "test_upload_images");
-formData.append("nonce", AICG.nonce);
+        button.prop('disabled', true);
+        statusDiv.html('<span style="color: #666;">🔄 Probando conexión con AI21...</span>').show();
 
-for (let i = 0; i < imagenesInput.files.length; i++) {
-    formData.append("imagenes[]", imagenesInput.files[i]);
-}
+        $.ajax({
+            url: AICG.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'test_api_connection',
+                nonce: AICG.api_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    statusDiv.html('<span style="color: #46b450;">✅ Conexión exitosa con AI21</span>').show();
+                } else {
+                    statusDiv.html('<span style="color: #dc3232;">❌ Error: ' + response.data + '</span>').show();
+                }
+            },
+            error: function() {
+                statusDiv.html('<span style="color: #dc3232;">❌ Error al conectar con el servidor</span>').show();
+            },
+            complete: function() {
+                button.prop('disabled', false);
+            }
+        });
+    });
+
+    $('#test_linkedin_connection').on('click', function() {
+        var button = $(this);
+        var statusDiv = $('#linkedin_status');
+
+        button.prop('disabled', true);
+        statusDiv.html('<span style="color: #666;">🔄 Probando conexión con LinkedIn...</span>').show();
+
+        $.ajax({
+            url: AICG.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'test_linkedin_connection',
+                nonce: AICG.linkedin_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    statusDiv.html('<span style="color: #46b450;">✅ Conexión exitosa con LinkedIn</span>').show();
+                } else {
+                    statusDiv.html('<span style="color: #dc3232;">❌ Error: ' + response.data + '</span>').show();
+                }
+            },
+            error: function() {
+                statusDiv.html('<span style="color: #dc3232;">❌ Error al conectar con el servidor</span>').show();
+            },
+            complete: function() {
+                button.prop('disabled', false);
+            }
+        });
+    });
+
+    $('#imagenes').on('change', function() {
+        var files = this.files;
+        var formData = new FormData();
+        formData.append("action", "test_upload_images");
+        formData.append("nonce", AICG.upload_nonce);
+
+        // Mostrar vista previa de las imágenes
+        var previewContainer = $('#preview-contenedor');
+        previewContainer.empty();
+
+        for (var i = 0; i < files.length; i++) {
+            (function(file) {
+                var reader = new FileReader();
+
+                reader.onload = function(e) {
+                    var preview = $('<div class="preview-item">')
+                        .append($('<img>').attr('src', e.target.result))
+                        .append($('<div class="preview-name">').text(file.name));
+                    previewContainer.append(preview);
+                };
+
+                reader.readAsDataURL(file);
+            })(files[i]);
+        }
+
+        // Subir las imágenes
+        for (var i = 0; i < files.length; i++) {
+            formData.append("imagenes[]", files[i]);
+        }
+
+        $.ajax({
+            url: AICG.ajaxurl,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    console.log('Imágenes subidas correctamente:', response.data.files);
+                } else {
+                    console.error('Error al subir imágenes:', response.data.errors);
+                }
+            },
+            error: function() {
+                console.error('Error al conectar con el servidor');
+            }
+        });
+    });
+
+    $('#generarPost').on('click', function() {
+        var button = $(this);
+        var formData = new FormData();
+        var tipoContenido = $('#tipo_contenido').val();
+
+        // Agregar datos del formulario
+        formData.append('action', 'aicg_publicar_post');
+        formData.append('nonce', AICG.nonce);
+        formData.append('titulo', $('#titulo').val());
+        formData.append('tipo_contenido', tipoContenido);
+        formData.append('palabras_clave', $('#palabras_clave').val());
+
+        // Agregar imágenes si existen
+        var imagenesInput = $('#imagenes')[0];
+        if (imagenesInput.files.length > 0) {
+            for (var i = 0; i < imagenesInput.files.length; i++) {
+                formData.append('imagenes[]', imagenesInput.files[i]);
+            }
+        }
+
+        button.prop('disabled', true);
+        button.text('Generando...');
+
+        $.ajax({
+            url: AICG.ajaxurl,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    if (tipoContenido === 'linkedin') {
+                        alert('Post publicado en LinkedIn correctamente.');
+                    } else {
+                        alert('Post publicado en WordPress correctamente.');
+                    }
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.data);
+                }
+            },
+            error: function() {
+                alert('Error al conectar con el servidor');
+            },
+            complete: function() {
+                button.prop('disabled', false);
+                button.text('Generar Post');
+            }
+        });
+    });
+});

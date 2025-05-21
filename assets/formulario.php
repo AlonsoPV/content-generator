@@ -3,7 +3,7 @@
 
 <div class="generador-contenido">
   <div class="formulario">
-    <h2>¡Genera tu idea! 84132b46-bdb1-47b9-841c-d4dbc9be6229</h2>
+    <h2>¡Genera tu idea!</h2>
     <form id="generadorForm" method="post" enctype="multipart/form-data">
       <div class="form-row">
         <div class="form-group">
@@ -15,9 +15,7 @@
                 <option value="whatsapp">Whatsapp</option>
                 <option value="linkedin">LinkedIn</option>
               </select>
-              <div id="plataforma-seleccionada" style="margin-top: 10px; padding: 10px; border-radius: 5px; display: none; background-color: #f0f0f0;">
-                Plataforma seleccionada: <strong id="nombre-plataforma"></strong>
-              </div>
+              
               
               <script>
                 // Script directo para manejar el cambio
@@ -120,29 +118,29 @@ El estilo define cómo se presentará la información: narrativo, técnico, conv
       <div id="keywords-container" class="keywords-grid"></div>
       <button type="button" id="add-keyword-button" class="btn-add-keyword">
         <i class="fas fa-plus"></i> Añadir palabra clave </button>
-        <div class="form-group" id="imagenes-wrapper">
-      <label for="imagenes"><i class="fas fa-images"></i> Subir imágenes:</label>
-      <input type="file" id="imagenes" name="imagenes[]" multiple accept="image/*">
-      <div id="preview-contenedor" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;"></div>
-
-    </div>
-      <button type="button" id="generarPost" class="btn-generar">
+        <div class="form-group">
+          <label for="imagenes">Imágenes:</label>
+          <input type="file" id="imagenes" name="imagenes[]" multiple accept="image/*" class="form-control">
+          <small class="form-text text-muted">Puedes seleccionar múltiples imágenes. La primera imagen se usará como imagen principal.</small>
+          <div id="preview-contenedor"></div>
+        </div>
+      <button type="submit" id="generarPost" class="btn-generar">
         <i class="fas fa-cogs"></i> Generar</button>
     </form>
   </div>
   <div class="editor">
     <h2>Vista Previa</h2>
     <div id="preview-tabs">
-      <button type="button" id="text-tab">Texto Plano</button>
+      <button type="button" id="text-tab">Vista Texto Plano</button>
       <button type="button" id="html-tab" class="active">Vista HTML</button>
     </div>
     <div id="html-preview">
-      <input type="text" id="tituloEdit" placeholder="Título">
-      <textarea id="contenidoEdit" placeholder="Contenido"></textarea>
+      <input type="text" id="tituloEdit" placeholder="Título HTML">
+      <textarea id="contenidoEdit" placeholder="Contenido HTML. Aquí podrás editar el contenido HTML como los enlaces usando la etiqueta <a>"></textarea>
     </div>
     <div id="text-preview" style="display: none;">
-      <input type="text" id="tituloText" placeholder="Título">
-      <textarea id="contenidoText" placeholder="Contenido"></textarea>
+      <input type="text" id="tituloText" placeholder="Título en texto plano">
+      <textarea id="contenidoText" placeholder="Contenido en texto plano. Aquí visualizarás el contenido en texto plano, sin enlaces, etiquetas HTML, etc."></textarea>
       <div id="editor-toolbar">
         <button onclick="copiarTexto()"><i class="fas fa-copy"></i> Copiar texto plano</button>
       </div>
